@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
@@ -12,37 +11,21 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"time"
 )
 
-func printPage(url string, index int, title string) chromedp.Tasks {
-	htmlStr := ""
-
-	return chromedp.Tasks{
-		chromedp.Navigate(url),
-		chromedp.WaitVisible(".catalog .article-title .title"),
-		chromedp.Click(fmt.Sprintf(".catalog .article-title .title[title=\"%s\"", title)),
-		chromedp.WaitVisible("#article-content-container"),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			if data, err := page.CaptureSnapshot().Do(ctx); err != nil {
-				return err
-			} else {
-				htmlStr = data
-				return nil
-			}
-		}),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			return os.WriteFile(fmt.Sprintf("%d-%s.mhtml", index, title), []byte(htmlStr), 0o644)
-		}),
-	}
+type lesson struct {
+	Title string `json:"article_title"`
+	Id    int    `json:"id"`
 }
 
-func getAllLessons(url string, nodes *[]*cdp.Node) chromedp.Tasks {
-	return chromedp.Tasks{
-		chromedp.Navigate(url),
-		chromedp.WaitVisible(".catalog .article-title .title"),
-		chromedp.Nodes(`.catalog .article-title .title`, nodes),
-	}
+type lessonsResponse struct {
+	Data struct {
+		List []lesson `json:"list"`
+	} `json:"data"`
 }
+
+var lessonsChan = make(chan lessonsResponse)
 
 func listenForNetworkEvent(ctx context.Context) {
 	var id network.RequestID
@@ -52,7 +35,7 @@ func listenForNetworkEvent(ctx context.Context) {
 		case *network.EventRequestWillBeSent:
 			uri, _ := url.Parse(ev.Request.URL)
 			if uri.Path != "/serv/v1/column/articles" {
-				break
+				return
 			}
 			id = ev.RequestID
 		case *network.EventLoadingFinished:
@@ -65,20 +48,12 @@ func listenForNetworkEvent(ctx context.Context) {
 					if err != nil {
 						fmt.Println(err)
 					} else {
-
-						var res struct {
-							Data struct {
-								List []struct {
-									Title string `json:"article_title"`
-									Id    int    `json:"id"`
-								} `json:"list"`
-							} `json:"data"`
-						}
-						err := json.Unmarshal(body, &res)
-						if err != nil {
+						var res lessonsResponse
+						if err := json.Unmarshal(body, &res); err != nil {
 							fmt.Println(err.Error())
+							close(lessonsChan)
 						} else {
-							fmt.Println("ok", res)
+							lessonsChan <- res
 						}
 					}
 					return nil
@@ -122,17 +97,34 @@ to quickly create a Cobra application.`,
 		defer cancel()
 		listenForNetworkEvent(ctx)
 
-		lessons := make([]*cdp.Node, 0)
-		if err := chromedp.Run(ctx, getAllLessons(u, &lessons)); err != nil {
-			log.Fatal(err)
+		chromedp.Run(ctx,
+			chromedp.Navigate(u),
+		)
+
+		lessons := <-lessonsChan
+
+		for i, n := range lessons.Data.List {
+			fmt.Printf("working on %d, %s, %d...\n", i, n.Title, n.Id)
+			htmlStr := ""
+			if err := chromedp.Run(
+				ctx,
+				chromedp.Navigate(fmt.Sprintf("https://time.geekbang.org/column/article/%d", n.Id)),
+				chromedp.WaitVisible("#article-content-container"),
+				chromedp.Sleep(5*time.Second),
+				chromedp.ActionFunc(func(ctx context.Context) error {
+					if data, err := page.CaptureSnapshot().Do(ctx); err != nil {
+						return err
+					} else {
+						htmlStr = data
+						return nil
+					}
+				}),
+				chromedp.ActionFunc(func(ctx context.Context) error {
+					return os.WriteFile(fmt.Sprintf("%d-%s.mhtml", i+1, n.Title), []byte(htmlStr), 0o644)
+				})); err != nil {
+				log.Fatal(err)
+			}
 		}
-		//for i, n := range lessons {
-		//	title, _ := n.Attribute("title")
-		//	//fmt.Printf("working on %d,%s...\n", i, title)
-		//	//if err := chromedp.Run(ctx, printPage(u, i + 1, title)); err != nil {
-		//	//	log.Fatal(err)
-		//	//}
-		//}
 
 		log.Println("done")
 	},
