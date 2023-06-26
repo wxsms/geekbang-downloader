@@ -102,6 +102,7 @@ to quickly create a Cobra application.`,
 		var title string
 		chromedp.Run(ctx,
 			chromedp.Navigate(u),
+			chromedp.Sleep(2*time.Second),
 			chromedp.Title(&title),
 		)
 		fmt.Println("title is:", title)
