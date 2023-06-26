@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -96,12 +97,24 @@ to quickly create a Cobra application.`,
 		ctx, cancel = chromedp.NewContext(ctx)
 		defer cancel()
 		listenForNetworkEvent(ctx)
+		fmt.Println("navigate to homepage...")
 
+		var title string
 		chromedp.Run(ctx,
 			chromedp.Navigate(u),
+			chromedp.Title(&title),
 		)
+		fmt.Println("title is:", title)
+		path := filepath.Join(".", title)
+		os.MkdirAll(path, os.ModePerm)
 
-		lessons := <-lessonsChan
+		fmt.Println("waiting for lessons response...")
+		lessons, ok := <-lessonsChan
+		if !ok {
+			log.Fatal("get lessons fail")
+			return
+		}
+		fmt.Println("get lessons success")
 
 		for i, n := range lessons.Data.List {
 			fmt.Printf("working on %d, %s, %d...\n", i, n.Title, n.Id)
@@ -120,7 +133,7 @@ to quickly create a Cobra application.`,
 					}
 				}),
 				chromedp.ActionFunc(func(ctx context.Context) error {
-					return os.WriteFile(fmt.Sprintf("%d-%s.mhtml", i+1, n.Title), []byte(htmlStr), 0o644)
+					return os.WriteFile(filepath.Join(path, fmt.Sprintf("%d-%s.mhtml", i+1, n.Title)), []byte(htmlStr), 0o644)
 				})); err != nil {
 				log.Fatal(err)
 			}
