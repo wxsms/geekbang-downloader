@@ -39,8 +39,9 @@ func DownloadImage(url string, filename string) {
 	}
 }
 
-func ReplaceRemoteImagesWithLocal(filename string) {
-	file, err := os.ReadFile(filename)
+func ReplaceRemoteImagesWithLocal(base string, filename string) {
+	filepath := path.Join(base, filename)
+	file, err := os.ReadFile(filepath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,7 +50,8 @@ func ReplaceRemoteImagesWithLocal(filename string) {
 	matches := r.FindAllStringSubmatch(string(file), -1)
 
 	// mkdir if not exists
-	p := path.Join(path.Dir(filename), "images")
+	p := path.Join(base, "images")
+
 	if _, err := os.Stat(p); os.IsNotExist(err) {
 		if err := os.MkdirAll(p, 0755); err != nil {
 			log.Fatal(err)
@@ -62,7 +64,7 @@ func ReplaceRemoteImagesWithLocal(filename string) {
 		//fmt.Println(imageName)
 		file = []byte(strings.ReplaceAll(string(file), v[1], fmt.Sprintf("./images/%s", imageName)))
 	}
-	if err := os.WriteFile(filename, file, 0o644); err != nil {
+	if err := os.WriteFile(filepath, file, 0o644); err != nil {
 		log.Fatal(err)
 	}
 }
