@@ -7,6 +7,7 @@ import (
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
+	"github.com/flytam/filenamify"
 	"github.com/spf13/cobra"
 	"log"
 	"net/url"
@@ -105,6 +106,7 @@ to quickly create a Cobra application.`,
 			chromedp.Sleep(2*time.Second),
 			chromedp.Title(&title),
 		)
+		title, _ = filenamify.FilenamifyV2(title)
 		fmt.Println("title is:", title)
 		path := filepath.Join(".", title)
 		os.MkdirAll(path, os.ModePerm)
@@ -118,6 +120,9 @@ to quickly create a Cobra application.`,
 		fmt.Println("get lessons success")
 
 		for i, n := range lessons.Data.List {
+			if i < 44 {
+				continue
+			}
 			fmt.Printf("working on %d, %s, %d...\n", i, n.Title, n.Id)
 			htmlStr := ""
 			if err := chromedp.Run(
@@ -134,7 +139,8 @@ to quickly create a Cobra application.`,
 					}
 				}),
 				chromedp.ActionFunc(func(ctx context.Context) error {
-					return os.WriteFile(filepath.Join(path, fmt.Sprintf("%d-%s.mhtml", i+1, n.Title)), []byte(htmlStr), 0o644)
+					title, _ = filenamify.FilenamifyV2(n.Title)
+					return os.WriteFile(filepath.Join(path, fmt.Sprintf("%d__%s.mhtml", i+1, title)), []byte(htmlStr), 0o644)
 				})); err != nil {
 				log.Fatal(err)
 			}
