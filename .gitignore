@@ -24,3 +24,5 @@ go.work
 *.pdf
 *.png
 *.md
+*.jpg
+*.gif

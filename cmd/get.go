@@ -57,15 +57,19 @@ var getCmd = &cobra.Command{
 				log.Fatal(err)
 				return
 			}
+			markdown = fmt.Sprintf("# %s\n\n%s", article.Data.ArticleTitle, markdown)
 			title, _ := filenamify.FilenamifyV2(article.Data.ArticleTitle)
-			if err := os.WriteFile(filepath.Join(path, fmt.Sprintf("%d__%s.md", index, title)), []byte(markdown), 0o644); err != nil {
+			markdownFile := filepath.Join(path, fmt.Sprintf("%d__%s.md", index, title))
+			if err := os.WriteFile(markdownFile, []byte(markdown), 0o644); err != nil {
 				log.Fatal(err)
 				return
 			}
+			helpers.ReplaceRemoteImagesWithLocal(markdownFile)
 			// api rate limit
-			time.Sleep(10 * time.Second)
+			time.Sleep(2 * time.Second)
 		}
 
+		log.Println("All done!!!")
 	},
 }
 
