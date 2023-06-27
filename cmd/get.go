@@ -3,10 +3,13 @@ package cmd
 import (
 	"fmt"
 	md "github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/flytam/filenamify"
 	"github.com/spf13/cobra"
 	"github.com/wxsms/geekbang-downloader/apis"
 	"github.com/wxsms/geekbang-downloader/helpers"
 	"log"
+	"os"
+	"path/filepath"
 )
 
 // getCmd represents the get command
@@ -37,8 +40,36 @@ to quickly create a Cobra application.`,
 		}
 		helpers.Debug(cmd, "get article list result:", list)
 
+		courseTitle, _ := filenamify.FilenamifyV2(info.Data.Title)
+		path := filepath.Join(".", courseTitle)
+		err := os.MkdirAll(path, os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
 		converter := md.NewConverter("", true, nil)
-		helpers.Debug(cmd, converter)
+		for i, a := range list.Data.List {
+			index := i + 1
+			helpers.Debug(cmd, "downloading article...", index, a.Title)
+			var article apis.ArticleDetailResp
+			if err := helpers.Request(apis.ArticleDetailApi, fmt.Sprintf(`{"id":"%d","include_neighbors":true,"is_freelyread":true}`, a.Id), &article); err != nil {
+				log.Fatal(err)
+				return
+			}
+			markdown, err := converter.ConvertString(article.Data.ArticleContent)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+			title, _ := filenamify.FilenamifyV2(article.Data.ArticleTitle)
+			if err := os.WriteFile(filepath.Join(path, fmt.Sprintf("%d__%s.md", index, title)), []byte(markdown), 0o644); err != nil {
+				log.Fatal(err)
+				return
+			}
+			// api rate limit
+			//time.Sleep(5 * time.Second)
+		}
 
 	},
 }

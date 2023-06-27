@@ -23,3 +23,4 @@ go.work
 *.mhtml
 *.pdf
 *.png
+*.md
