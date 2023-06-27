@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // getCmd represents the get command
@@ -32,13 +33,13 @@ to quickly create a Cobra application.`,
 			log.Fatal(err)
 			return
 		}
-		helpers.Debug(cmd, "get course info result:", info)
+		//helpers.Debug(cmd, "get course info result:", info)
 
 		if err := helpers.Request(apis.ArticleListApi, fmt.Sprintf(`{"cid":"%s","size":500,"prev":0,"order":"earliest","sample":false}`, cid), &list); err != nil {
 			log.Fatal(err)
 			return
 		}
-		helpers.Debug(cmd, "get article list result:", list)
+		//helpers.Debug(cmd, "get article list result:", list)
 
 		courseTitle, _ := filenamify.FilenamifyV2(info.Data.Title)
 		path := filepath.Join(".", courseTitle)
@@ -68,7 +69,7 @@ to quickly create a Cobra application.`,
 				return
 			}
 			// api rate limit
-			//time.Sleep(5 * time.Second)
+			time.Sleep(10 * time.Second)
 		}
 
 	},
