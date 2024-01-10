@@ -20,6 +20,12 @@ var getCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		//fmt.Println(viper.Get("cookie"))
 		cid, _ := cmd.Flags().GetString("course")
+		localImage, _ := cmd.Flags().GetBool("local-image")
+
+		log.Printf("----------------------")
+		log.Printf("Course ID: %v", cid)
+		log.Printf("Download images: %v", localImage)
+		log.Printf("----------------------")
 
 		var info apis.ColumnInfoResp
 		var list apis.ArticleListResp
@@ -27,13 +33,11 @@ var getCmd = &cobra.Command{
 			log.Fatal(err)
 			return
 		}
-		//helpers.Debug(cmd, "get course info result:", info)
 
 		if err := helpers.Request(apis.ArticleListApi, fmt.Sprintf(`{"cid":"%s","size":500,"prev":0,"order":"earliest","sample":false}`, cid), &list); err != nil {
 			log.Fatal(err)
 			return
 		}
-		//helpers.Debug(cmd, "get article list result:", list)
 
 		courseTitle, _ := filenamify.FilenamifyV2(info.Data.Title)
 		path := filepath.Join(".", courseTitle)
@@ -46,7 +50,7 @@ var getCmd = &cobra.Command{
 		converter := md.NewConverter("", true, nil)
 		for i, a := range list.Data.List {
 			index := i + 1
-			helpers.Debug(cmd, "downloading article...", index, a.Title)
+			log.Printf("[%d/%d] %s", index, len(list.Data.List), a.Title)
 			var article apis.ArticleDetailResp
 			if err := helpers.Request(apis.ArticleDetailApi, fmt.Sprintf(`{"id":"%d","include_neighbors":true,"is_freelyread":true}`, a.Id), &article); err != nil {
 				log.Fatal(err)
@@ -64,12 +68,14 @@ var getCmd = &cobra.Command{
 				log.Fatal(err)
 				return
 			}
-			helpers.ReplaceRemoteImagesWithLocal(path, markdownFile)
+			if localImage {
+				helpers.ReplaceRemoteImagesWithLocal(path, markdownFile)
+			}
 			// api rate limit
 			time.Sleep(2 * time.Second)
 		}
 
-		log.Println("All done!!!")
+		log.Printf("Course %s successfully downloaded.", cid)
 	},
 }
 
@@ -85,5 +91,9 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	getCmd.Flags().StringP("course", "c", "", "course id to download, for example, id is [100093501] in this url: https://time.geekbang.org/column/intro/100093501?tab=catalog")
-	getCmd.MarkFlagRequired("course")
+	getCmd.Flags().Bool("local-image", false, "download image to local")
+	err := getCmd.MarkFlagRequired("course")
+	if err != nil {
+		panic(err)
+	}
 }
