@@ -3,19 +3,16 @@ package cmd
 import (
 	"fmt"
 	md "github.com/JohannesKaufmann/html-to-markdown"
-	"github.com/flytam/filenamify"
 	"github.com/spf13/cobra"
 	"github.com/wxsms/geekbang-downloader/apis"
 	"github.com/wxsms/geekbang-downloader/helpers"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
-func downloadCourse(dest string, cid string, localImage bool, skipExist bool) {
-
+func downloadCourse(dest string, cid string, localImage bool) {
 	var info apis.ColumnInfoResp
 	var list apis.ArticleListResp
 	if err := helpers.Request(apis.ColumnInfoApi, fmt.Sprintf(`{"product_id":%s,"with_recommend_article":true}`, cid), &info); err != nil {
@@ -28,13 +25,8 @@ func downloadCourse(dest string, cid string, localImage bool, skipExist bool) {
 		return
 	}
 
-	courseTitle, _ := filenamify.FilenamifyV2(info.Data.Title)
-	courseTitle = strings.TrimSpace(courseTitle)
+	courseTitle := helpers.ToFilename(info.Data.Title)
 	path := filepath.Join(dest, courseTitle)
-	if _, err := os.Stat(path); err == nil && skipExist {
-		log.Printf("skip: %d %s\n", info.Data.Id, info.Data.Title)
-		return
-	}
 
 	log.Printf("----------------------")
 	log.Printf("ID:\t%v", cid)
@@ -63,7 +55,7 @@ func downloadCourse(dest string, cid string, localImage bool, skipExist bool) {
 			return
 		}
 		markdown = fmt.Sprintf("# %s\n\n%s", article.Data.ArticleTitle, markdown)
-		title, _ := filenamify.FilenamifyV2(article.Data.ArticleTitle)
+		title := helpers.ToFilename(article.Data.ArticleTitle)
 		markdownFile := fmt.Sprintf("%d__%s.md", index, title)
 		if err := os.WriteFile(filepath.Join(path, markdownFile), []byte(markdown), 0o644); err != nil {
 			log.Fatal(err)
@@ -76,7 +68,7 @@ func downloadCourse(dest string, cid string, localImage bool, skipExist bool) {
 		time.Sleep(2 * time.Second)
 	}
 
-	log.Printf("Course %s successfully downloaded.", cid)
+	//log.Printf("Course %s successfully downloaded.", cid)
 }
 
 // getCmd represents the get command
@@ -88,7 +80,7 @@ var getCmd = &cobra.Command{
 		cid, _ := cmd.Flags().GetString("course")
 		dest, _ := cmd.Flags().GetString("dest")
 		localImage, _ := cmd.Flags().GetBool("local-image")
-		downloadCourse(dest, cid, localImage, false)
+		downloadCourse(dest, cid, localImage)
 	},
 }
 

@@ -6,6 +6,8 @@ import (
 	"github.com/wxsms/geekbang-downloader/apis"
 	"github.com/wxsms/geekbang-downloader/helpers"
 	"log"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -39,11 +41,20 @@ var allCmd = &cobra.Command{
 			}
 
 			for _, product := range res.Data.Products {
-				if product.Id == 100017001 {
-					// 极客视点
+				if product.Id == 100017001 || product.Id == 100024801 {
+					// 极客视点, 卖桃者说
 					continue
 				}
-				downloadCourse(dest, strconv.Itoa(product.Id), localImage, skipExist)
+				if skipExist {
+					courseTitle := helpers.ToFilename(product.Title)
+					path := filepath.Join(dest, courseTitle)
+					if _, err := os.Stat(path); err == nil {
+						log.Printf("skip: %d %s\n", product.Id, product.Title)
+						continue
+					}
+				}
+
+				downloadCourse(dest, strconv.Itoa(product.Id), localImage)
 				time.Sleep(2 * time.Second)
 			}
 
