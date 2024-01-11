@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -34,6 +35,7 @@ func downloadCourse(dest string, cid string, localImage bool) {
 	}
 
 	courseTitle, _ := filenamify.FilenamifyV2(info.Data.Title)
+	courseTitle = strings.TrimSpace(courseTitle)
 	path := filepath.Join(dest, courseTitle)
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
