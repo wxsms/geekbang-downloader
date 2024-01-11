@@ -41,10 +41,6 @@ var allCmd = &cobra.Command{
 			}
 
 			for _, product := range res.Data.Products {
-				if product.Id == 100017001 || product.Id == 100024801 {
-					// 极客视点, 卖桃者说
-					continue
-				}
 				if skipExist {
 					courseTitle := helpers.ToFilename(product.Title)
 					path := filepath.Join(dest, courseTitle)

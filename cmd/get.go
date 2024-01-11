@@ -56,7 +56,7 @@ func downloadCourse(dest string, cid string, localImage bool) {
 		}
 		markdown = fmt.Sprintf("# %s\n\n%s", article.Data.ArticleTitle, markdown)
 		title := helpers.ToFilename(article.Data.ArticleTitle)
-		markdownFile := fmt.Sprintf("%d__%s.md", index, title)
+		markdownFile := fmt.Sprintf("%03d__%s.md", index, title)
 		if err := os.WriteFile(filepath.Join(path, markdownFile), []byte(markdown), 0o644); err != nil {
 			log.Fatal(err)
 			return
