@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func downloadCourse(dest string, cid string, localImage bool) {
+func downloadCourse(dest string, cid string, localImage bool, skipExist bool) {
 
 	var info apis.ColumnInfoResp
 	var list apis.ArticleListResp
@@ -22,12 +22,6 @@ func downloadCourse(dest string, cid string, localImage bool) {
 		log.Fatal(err)
 		return
 	}
-
-	log.Printf("----------------------")
-	log.Printf("ID:\t%v", cid)
-	log.Printf("Title:\t%v", info.Data.Title)
-	log.Printf("Images:\t%v", localImage)
-	log.Printf("----------------------")
 
 	if err := helpers.Request(apis.ArticleListApi, fmt.Sprintf(`{"cid":"%s","size":500,"prev":0,"order":"earliest","sample":false}`, cid), &list); err != nil {
 		log.Fatal(err)
@@ -37,6 +31,17 @@ func downloadCourse(dest string, cid string, localImage bool) {
 	courseTitle, _ := filenamify.FilenamifyV2(info.Data.Title)
 	courseTitle = strings.TrimSpace(courseTitle)
 	path := filepath.Join(dest, courseTitle)
+	if _, err := os.Stat(path); err == nil && skipExist {
+		log.Printf("skip: %d %s\n", info.Data.Id, info.Data.Title)
+		return
+	}
+
+	log.Printf("----------------------")
+	log.Printf("ID:\t%v", cid)
+	log.Printf("Title:\t%v", info.Data.Title)
+	log.Printf("Images:\t%v", localImage)
+	log.Printf("----------------------")
+
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
@@ -68,7 +73,7 @@ func downloadCourse(dest string, cid string, localImage bool) {
 			helpers.ReplaceRemoteImagesWithLocal(path, markdownFile)
 		}
 		// api rate limit
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 	log.Printf("Course %s successfully downloaded.", cid)
@@ -83,7 +88,7 @@ var getCmd = &cobra.Command{
 		cid, _ := cmd.Flags().GetString("course")
 		dest, _ := cmd.Flags().GetString("dest")
 		localImage, _ := cmd.Flags().GetBool("local-image")
-		downloadCourse(dest, cid, localImage)
+		downloadCourse(dest, cid, localImage, false)
 	},
 }
 

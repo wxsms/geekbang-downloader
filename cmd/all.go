@@ -15,13 +15,14 @@ var allCmd = &cobra.Command{
 	Short: "Download all courses",
 	Run: func(cmd *cobra.Command, args []string) {
 		localImage, _ := cmd.Flags().GetBool("local-image")
+		skipExist, _ := cmd.Flags().GetBool("skip-exist")
 		dest, _ := cmd.Flags().GetString("dest")
 		page := 1
 		for {
 			var res apis.ProductListResp
 			if err := helpers.Request(apis.ProductListApi, fmt.Sprintf(`{
     "tag_ids": [],
-    "product_type": 1,
+    "product_type": 0,
     "product_form": 1,
     "pvip": 0,
     "prev": %d,
@@ -38,8 +39,8 @@ var allCmd = &cobra.Command{
 			}
 
 			for _, product := range res.Data.Products {
-				downloadCourse(dest, strconv.Itoa(product.Id), localImage)
-				time.Sleep(60 * time.Second)
+				downloadCourse(dest, strconv.Itoa(product.Id), localImage, skipExist)
+				time.Sleep(2 * time.Second)
 			}
 
 			if !res.Data.Page.More {
@@ -54,4 +55,5 @@ func init() {
 	rootCmd.AddCommand(allCmd)
 	allCmd.Flags().StringP("dest", "d", ".", "download dest, current dir by default")
 	allCmd.Flags().Bool("local-image", false, "download image to local")
+	allCmd.Flags().Bool("skip-exist", false, "skip exist course (if the folder present in dest)")
 }
