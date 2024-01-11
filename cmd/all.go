@@ -39,6 +39,10 @@ var allCmd = &cobra.Command{
 			}
 
 			for _, product := range res.Data.Products {
+				if product.Id == 100017001 {
+					// 极客视点
+					continue
+				}
 				downloadCourse(dest, strconv.Itoa(product.Id), localImage, skipExist)
 				time.Sleep(2 * time.Second)
 			}
